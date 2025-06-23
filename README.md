@@ -17,6 +17,6 @@ Who Is This For?
 - Anyone interested in food data
 
 Get Started
-1.Clone the repo
-2.Install dependencies
-3.Start capturing your food data!
+1. Clone the repo
+2. Install dependencies
+3. Start capturing your food data!

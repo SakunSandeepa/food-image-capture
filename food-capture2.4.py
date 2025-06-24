@@ -54,16 +54,22 @@ def analyze_image_with_openai(photo_path):
         img_data = base64.b64encode(f.read()).decode()
 
     try:
+
         response = openai.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": "Please analyze the following image."},
-                        {"type": "image_url", "image_url": {
-                            "url": f"data:image/jpeg;base64,{img_data}"
-                        }}
+                        {"type": "text", "text": (
+                            "You are a food quality inspector. "
+                            "Analyze the following image and report on:\n"
+                            "- Visual freshness (e.g. browning, wilting, dryness, burn marks)\n"
+                            "- Presentation (is it neat, messy, well-arranged?)\n"
+                            "- Anything unusual or problematic (foreign objects, wrong portion size, etc.)\n"
+                            "Give your answer in 2-3 sentences and a 1-5 quality score."
+                        )},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_data}"}}
                     ]
                 }
             ]
@@ -105,7 +111,8 @@ def main():
                 logging.error("❌ Camera frame not available.")
                 continue
 
-            display_frame = cv2.resize(frame, (800, 600))
+            # display_frame = cv2.resize(frame, (800, 600))
+            display_frame = cv2.resize(frame, (1280, 720))
             display_frame = draw_code_box(display_frame, code_text)
 
             cv2.imshow(WINDOW_NAME, display_frame)

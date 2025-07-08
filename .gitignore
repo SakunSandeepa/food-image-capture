@@ -197,3 +197,4 @@ cython_debug/
 
 /image
 capture_log.txt
+.idea

@@ -11,6 +11,7 @@ import logging
 import threading
 from dotenv import load_dotenv
 from playsound import playsound
+from ultralytics import YOLO
 
 load_dotenv()
 
@@ -64,18 +65,17 @@ def analyze_image_with_openai(photo_path):
                     "role": "user",
                     "content": [
                         {"type": "text", "text":
-"""You are a food inspector AI. Briefly analyze this food photo and reply in this format:
+    """You are a food inspector AI. Briefly analyze this food photo and reply in this format:
 
-Summary: [one short line]
-Color: [one word or phrase]
-Shape/Size: [one word or phrase]
-Packaging: [short phrase or 'N/A']
-Presentation: [short phrase]
-Unusual: [short phrase or 'None']
-Rating: [bad|normal|good|excellent] [emoji: 🔴🟠🟢🔵]
+    Summary: [one short line]
+    Color: [one word or phrase]
+    Shape/Size: [one word or phrase]
+    Presentation: [short phrase]
+    Unusual: [short phrase or 'None']
+    Rating: [bad|normal|good|excellent] [emoji: 🔴🟠🟢🔵]
 
-Keep it concise and use the emoji for the rating at the end.
-""" 
+    Keep it concise and use the emoji for the rating at the end.
+    """ 
                         },
                         {"type": "image_url", "image_url": {
                             "url": f"data:image/jpeg;base64,{img_data}"
@@ -120,6 +120,11 @@ def play_success_sound():
 def main():
     os.makedirs(PHOTO_DIR, exist_ok=True)
     cap = cv2.VideoCapture(0)
+
+    # Load YOLOv8n (tiny, fast) for food detection.
+    yolo_model = YOLO("yolov8n.pt")  # Use your custom model if you have one
+
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, IMAGE_HEIGHT)
     cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
@@ -137,8 +142,28 @@ def main():
                 logging.error("❌ Camera frame not available.")
                 continue
 
-            display_frame = cv2.resize(frame, (IMAGE_WIDTH, IMAGE_HEIGHT))
+            # Run YOLO detection on frame
+            results = yolo_model(frame)
+            detected = False
+            annotated_frame = results[0].plot()
+            
+
+            # If you want to only allow capture when food is detected:
+            # (COCO model: 'food' could be labeled as 'pizza', 'sandwich', 'hot dog', etc.)
+            for box in results[0].boxes:
+                cls_id = int(box.cls[0])
+                label = yolo_model.names[cls_id]
+                if label in ["pizza", "sandwich", "hot dog", "apple", "banana", "cake"]:  # extend as needed
+                    detected = True
+
+            # Show annotated frame instead of plain frame
+            display_frame = cv2.resize(annotated_frame, (IMAGE_WIDTH, IMAGE_HEIGHT))
             display_frame = draw_code_box(display_frame, code_text)
+            if not detected:
+                cv2.putText(display_frame, "NO FOOD DETECTED", (20, 100),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 0, 255), 3, cv2.LINE_AA)
+
+
             cv2.imshow(WINDOW_NAME, display_frame)
 
             key = cv2.waitKey(1) & 0xFF
